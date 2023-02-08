@@ -1,0 +1,89 @@
+% -*- coding: utf-8; -*-
+
+\chapter{Development}
+\label{cha:Development}
+The type extractor depends heavily on the Lua debug library. Our tool make use of the hook mechanism and introspective functions of the language to inspect names and values inside a program execution. In this section we will describe the implementation of our extractor, emphasizing some key parts.
+\section*{Type extraction}
+
+The core functionality of the type extractor is the creation of a sophisticated type representation supported by the \textit{type} function. A basic example of type extraction is shown in Code~\ref{type_new}.
+
+\lstinputlisting[label=type_new,title={Type Extraction},caption={Type Extraction}, language={[5.0]Lua}]{codes/type_new.lua}
+
+A key aspect of the type entity is the ability to generate a new representation based on the union of other two types. It's pointed in Code~\ref{type_union} how some trivial types are merged together to create a new type. In the case of the union function, we override the \textit{\_\_add} function, as we want to use the \textit{+} operator to manipulate types.
+\clearpage
+
+\lstinputlisting[label=type_union,title={Type Union},caption={Type Union}, language={[5.0]Lua}]{codes/type_union.lua}
+
+
+The creation and union of types combined, enables the categorization of array types in a more elegant way. For example, we can obtain an array type by iterating over its structure, mapping each element to a new type, then reducing this array of types by folding it with our union function. The implementation of this strategy is shown in Code~\ref{array_type}.
+
+\lstinputlisting[label=array_type,title={Array Type Creation},caption={Array Type Creation}, language={[5.0]Lua}]{codes/array_fold.lua}
+
+\section*{Basic profiler}
+The project development is inspired by a rudimentary profiler specified in Chapter 25 of the Programming in Lua book \cite{ierusalimschy_programming_2016}. This profiler gives us insight of how a function can be inspected during runtime as it can be easly expanded to explore other introspective capabilities. Code~\ref{hook} shows the hook function registered to be executed by each event. Inevitably, some functions we do not want to inspect are captured by the this hook, so we ignore these functions as soon as we identify it's not a Lua function. The counterside of this restriction is that C functions defined by the user will not be inspected.
+
+\lstinputlisting[label=hook,title={Hook function},caption={Hook function}, language={[5.0]Lua}]{codes/hook.lua}
+
+Notice the invocation of \textit{debug.getinfo} with a sequence of letters representing what information we want to obtain. The \textcolor{gray}{\textit{Sn}} part captures information about the function's name, location and source, useful when generating the desired report. The letter \textcolor{gray}{\textit{f}} fills the function value, which is used as a key value for several global tables shared across modules. The letter \textcolor{gray}{\textit{t}} tells us if the function event is part of a tail call. It's important to track this value when updating return values. Finally, the letter \textcolor{gray}{\textit{r}} fills information about the values being transferred, that is, parameters values in a call or return values in a return.
+
+\section*{Local variables inspection}
+
+\textit{Inspect} is a function imported by the Inspect module and it's implemention is shown in Code~\ref{inspect}. It's interesting to notice that the transfered values can be inspected the same way regardless of the event type. The simplification is possible due to the ntransfer and ftransfer fields obtained before. In a call event, ftransfer is always 1, it means that the index of the first transfered value is actually the index of the first parameter, while ntransfer is the number of parameters. On the other hand, in a return event the ftransfer index is not as predictable as in a call event and the ntransfer field holds the number of transfered values in the return statement.
+
+\lstinputlisting[label=inspect,title={Inspect function},caption={Inspect function}, language={[5.0]Lua}]{codes/inspect.lua}
+
+Another instrospective function explored by our extractor is the \textit{debug.getlocal} function which is is responsible for accessing local variables within a closure. Togheter with the transfered value indexes, \textit{getlocal} can to access the parameter and return values we want and extract it's type. This logic is shown in Code~\ref{transfered}.
+
+\lstinputlisting[label=transfered,title={Get Transfered Types},caption={Get Transfered Types}, language={[5.0]Lua}]{codes/transfer_types.lua}
+
+Lua functions feature a concept called \textit{proper tail calls}, meaning that the calling function does not have its respective space in the stack after a tail call is made. Lua's proper tail call design is appropriate for many programming situations, but it requires our extarctor an extra step for updating return values of functions. Because Lua does not keep any information of the calling function of a tail call, our extractor still had to keep this information for updating the return values appropriately. Code~\ref{update_return} shows that, by manipulating a stack table, we can maintain the syncronism between the return type inspection and the program's call stack.
+
+
+\lstinputlisting[label=update_return,title={Update Return Types},caption={Update Return Types}, language={[5.0]Lua}]{codes/update_return.lua}
+
+\section*{Type comparison}
+
+In order to test if our type representation is correct, we explored the relational metamethod \textit{\_\_eq}, giving a new meaning under our type context. Two types are equal if it has the same type representation. With that in mind, an equality function can be defined recursevly, by analysing each type tag and comparing subsequent structures if needed. An example of type comparison is shown in Code~\ref{transfered}.
+
+\lstinputlisting[label=compare,title={Type Comparison},caption={Type Comparison}, language={[5.0]Lua}]{codes/type_compare.lua}
+
+% \paragraph*{Type}
+% Categorize values into conventional types, boolean, integer, string, float, number, array, record, function
+% An array type is defined by the union of the types of each element in the array. This result can be achieved by a map+reduce strategy, creating a new type for each element in the array and merging them by our union function.
+% \subparagraph*{Compatibility Matrix}
+% \subparagraph*{Relational Metamethods}
+% \paragraph*{Inspect}
+% \subparagraph*{Accessing local variables}
+% iterating getlocal for each transfered value
+% \paragraph*{Hook}
+% \subparagraph*{Basic profiler}
+% getinfo at hook events
+% \paragraph*{Report}
+% \subparagraph*{String formating}
+% \paragraph*{Test}
+% \subparagraph*{Type comparison by an equality function}
+
+
+% Table example. Table~\ref{tab:res} shows results. 
+
+% \begin{table}[!h]
+% \caption{Results for devil mesh}
+% \tiny
+% \begin{center}
+% \begin{tabular}{ m{1.1cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} m{0.95cm} } 
+%  & Mean Vertex Distance & L2 Vertex Based & Mean Quadric & MSAE & L2 Normal Based & Tangential & Mean Discrete Curvature & Area Error & Volume Error\\ 
+%  \hline 
+% \cite{FDC03} & 0.061277 & 0.110973 & 0.236219 & 19.697900 & 0.055170 & 0.047678 & 0.090284 & 0.051443 & 0.045645 \\ 
+%  \cite{JDD03} & 0.001293 & 0.002800 & 0.002289 & 21.237300 & 0.021589 & 0.013026 & 0.087991 & 0.000364 & 0.002621 \\ 
+%  \cite{SRML07} & 0.001439 & 0.002880 & 0.003540 & 14.043200 & 0.012654 & 0.008911 & 0.055849 & 0.007806 & 0.000582 \\ 
+%  \cite{ZFAT11} & \cellcolor{blue!25}0.000713 & \cellcolor{blue!25}0.001537 & 0.001824 & 12.171400 & \cellcolor{blue!25}0.009654 & \cellcolor{blue!25}0.005781 & \cellcolor{blue!25}0.054567 & 0.005617 & \cellcolor{blue!25}0.000425 \\ 
+%  \cite{HS13} & 0.002531 & 0.004560 & 0.007108 & 13.830100 & 0.017459 & 0.010314 & 0.114528 & 0.001686 & 0.001786 \\ 
+%  \cite{ZDZBL15} & 0.001623 & 0.003079 & 0.005048 & \cellcolor{blue!25}10.454200 & 0.015233 & 0.008054 & 0.094668 & 0.002629 & 0.001326 \\ 
+%  \cite{YRP16} & 0.000737 & 0.001548 & \cellcolor{blue!25}0.001493 & 16.880800 & 0.014129 & 0.006974 & 0.079952 & \cellcolor{blue!25}0.000209 & 0.002375 \\ 
+%  Ours & 0.000987 & 0.001902 & 0.002686 & 11.574200 & 0.010632 & 0.006796 & 0.075106 & 0.003970 & 0.000722 \\ 
+%  \end{tabular}
+% \end{center}
+%  \label{tab:res}
+% \end{table}
+
+% \section{Comparison}
