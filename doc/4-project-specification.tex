@@ -13,7 +13,7 @@ The Type module is responsible for categorizing Lua values into a refined type r
     && &| \ \{\} && \text{empty type} \\
     && &| \ any && \text{dynamic type}
 \end{flalign*}
-It also defines a union strategy between two types. If types are equal, then the result of a union is of the same type but if types are incopatible, a dynamic type is generated. A compatibility table is shown in~\ref{tab:comp} to help understanding this union strategy. Table~\ref{tab:res} shows the union strategy between primitive number types.
+It also defines a union strategy between two types. If types are equal, then the result of a union is of the same type but if types are incopatible, a dynamic type is generated. A compatibility table is shown in~\ref{tab:comp} to help understanding this union strategy.
 \begin{table}[!h]
     \caption{Compatibility table}
     \tiny
@@ -35,18 +35,7 @@ It also defines a union strategy between two types. If types are equal, then the
      \label{tab:comp}
     \end{table}
 \clearpage
-\begin{table}[!h]
-\caption{Primitive Number Type Union}
-\begin{center}
-    \begin{tabular}{lll}
-        type1                        & type2  & result                      \\ \hline
-        \multicolumn{1}{|l}{integer} & float  & \multicolumn{1}{l|}{float} \\ \hline
-        \multicolumn{1}{|l}{integer} & number & \multicolumn{1}{l|}{number} \\ \hline
-        \multicolumn{1}{|l}{float}   & number & \multicolumn{1}{l|}{number} \\ \hline
-        \end{tabular}
-\end{center}
- \label{tab:res}
-\end{table}
+
 For recursive types, optional type and dynamic type, the following definition states the rules for union operation:
 \begin{flalign*}
     && \left \{ \left. \tau_i \right \}\right. \cup \left \{ \left. \tau_j \right \}\right. &= \left \{ \left. \tau_i \cup \tau_j \right \}\right. && \text{array union} \\ \\
@@ -79,7 +68,7 @@ Figure~\ref{fig:diag} shows the relationship between the project modules. Other 
 
 \begin{figure}
 \centering
-\includegraphics[width=0.45\textwidth]{pictures/module_diagram.png}
+\includegraphics[width=0.60\textwidth]{pictures/module_diagram.png}
 \caption{Diagram module}
 \label{fig:diag}
 \end{figure}
